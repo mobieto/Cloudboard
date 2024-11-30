@@ -16,7 +16,7 @@ public class WhiteboardApp2Application implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        redisTemplate.opsForValue().set("testkey1", "hello world");
+        //redisTemplate.opsForValue().set("testkey1", "hello world");
         System.out.println(redisTemplate.opsForValue().get("testkey1"));
     }
 }
