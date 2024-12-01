@@ -1,6 +1,7 @@
 package com.whiteboard.whiteboardapp2.Repo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Repository;
@@ -16,12 +17,80 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
     private static final long TTL = 360; // values in cache expire after 6 minutes
 
     @Override
-    public void put(String key, String value) {
+    public void put(String key, String value, boolean expire) {
         try {
             ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
             valueOperations.set(key, value);
 
-            redisTemplate.expire(key, TTL, TimeUnit.SECONDS);
+            if (expire) redisTemplate.expire(key, TTL, TimeUnit.SECONDS);
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error saving to Redis cache");
+        }
+    }
+
+    @Override
+    public void put(String key, String value, Long ttl) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            valueOperations.set(key, value);
+
+            redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error saving to Redis cache");
+        }
+    }
+
+    @Override
+    public Long increment(String key, Long ttl) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            Long result = valueOperations.increment(key);
+
+            redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
+
+            return result;
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error saving to Redis cache");
+        }
+    }
+
+    @Override
+    public Long increment(String key, boolean expire) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            Long result = valueOperations.increment(key);
+
+            if (expire) redisTemplate.expire(key, TTL, TimeUnit.SECONDS);
+
+            return result;
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error saving to Redis cache");
+        }
+    }
+
+    @Override
+    public Long decrement(String key, Long ttl) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            Long result = valueOperations.decrement(key);
+
+            redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
+
+            return result;
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error saving to Redis cache");
+        }
+    }
+
+    @Override
+    public Long decrement(String key, boolean expire) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            Long result = valueOperations.decrement(key);
+
+            if (expire) redisTemplate.expire(key, TTL, TimeUnit.SECONDS);
+
+            return result;
         } catch (RuntimeException runtimeException) {
             throw new RuntimeException("Error saving to Redis cache");
         }

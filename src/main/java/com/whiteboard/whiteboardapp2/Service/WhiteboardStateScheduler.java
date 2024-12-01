@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 @Service
-public class WbStateScheduler {
+public class WhiteboardStateScheduler {
     @Autowired
     private LockProvider lockProvider;
 
@@ -33,7 +33,7 @@ public class WbStateScheduler {
                 Duration.ZERO)
         );
 
-        if (!lock.isPresent()) return;
+        if (lock.isEmpty()) return; // lock is held by another instance
 
         try {
             // TODO: Aggregate cached state and save to sql db

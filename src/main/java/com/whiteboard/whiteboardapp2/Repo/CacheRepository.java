@@ -3,7 +3,17 @@ package com.whiteboard.whiteboardapp2.Repo;
 import java.util.Optional;
 
 public interface CacheRepository {
-    void put(String key, String value);
+    void put(String key, String value, Long ttl);
+
+    void put(String key, String value, boolean expire);
+
+    Long increment(String key, Long ttl);
+
+    Long increment(String key, boolean expire);
+
+    Long decrement(String key, Long ttl);
+
+    Long decrement(String key, boolean expire);
 
     Optional<String> get(String key);
 

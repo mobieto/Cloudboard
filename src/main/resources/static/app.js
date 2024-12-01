@@ -18,6 +18,13 @@ stompClient.onConnect = (frame) => {
    stompClient.subscribe("/topic/board-state", (inbound) => {
       console.log(inbound.body);
    })
+
+   stompClient.subscribe("/topic/connected-users", (inbound) => {
+      console.log(inbound.body);
+      $("#user-count").html("Connected users: " + inbound.body);
+   })
+
+   stompClient.publish({destination: "/app/get-num-users"})
 }
 
 document.body.onmousedown = (event) => {
