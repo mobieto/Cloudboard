@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -19,9 +18,6 @@ import static com.whiteboard.whiteboardapp2.Constants.WB_STATE_PREFIX;
 public class DrawController {
     @Autowired
     private CacheRepository cacheRepository;
-
-    @Autowired
-    private SimpMessagingTemplate simpMessagingTemplate;
 
     @MessageMapping("/draw-stroke")
     @SendTo("/topic/board-state")

@@ -7,12 +7,46 @@ const ActionModes = Object.freeze({
 const IsProduction = window.location.hostname !== "localhost";
 
 let currentActionMode = ActionModes.STROKE;
+let stompConnected = false;
+let mouseDownId = -1;
+let typingActive = false;
+let canvasMouseX = 0;
+let canvasMouseY = 0;
+let canvasObject = $("#drawing-board");
+let canvasContext = canvasObject.getContext('2d');
 
 const stompClient = new StompJs.Client({
    brokerURL: IsProduction ? 'ws://4.158.114.105/draw-websocket' : 'ws://localhost:8080/draw-websocket'
 });
 
+let whileMouseDown = (event) => {
+   console.log(canvasMouseX, canvasMouseY);
+}
+
+let onMouseUp = (event) => {
+   if (event.button !== 0) return;
+
+   if (mouseDownId !== -1) {
+      clearInterval(mouseDownId);
+      mouseDownId = -1;
+   }
+}
+
+let onMouseDown = (event) => {
+   if (event.button !== 0) return;
+
+   if (mouseDownId === -1) setInterval(whileMouseDown, 100);
+}
+
+let onMouseMoveInCanvas = (event) => {
+   let cRect = canvasObject.getBoundingClientRect();
+
+   canvasMouseX = Math.round(event.clientX - cRect.left);
+   canvasMouseY = Math.round(event.clientY - cRect.top);
+}
+
 stompClient.onConnect = (frame) => {
+   stompConnected = true;
    console.log("Connected");
 
    stompClient.subscribe("/topic/board-state", (inbound) => {
@@ -20,29 +54,16 @@ stompClient.onConnect = (frame) => {
    })
 
    stompClient.subscribe("/topic/connected-users", (inbound) => {
-      console.log(inbound.body);
       $("#user-count").html("Connected users: " + inbound.body);
    })
 
    stompClient.publish({destination: "/app/get-num-users"})
 }
 
-document.body.onmousedown = (event) => {
-   if (event.button !== 0) return;
-
-   console.log("Start stroke");
-}
-
-document.body.onmouseup = (event) => {
-   if (event.button !== 0) return;
-
-   console.log("End stroke");
-
-   stompClient.publish({
-      destination: "/app/draw-stroke",
-      body: JSON.stringify({})
-   });
-}
+document.body.onmousedown = onMouseDown;
+document.body.onmouseup = onMouseUp;
+document.body.onmouseout = onMouseUp;
+canvasObject.onmousemove = onMouseMoveInCanvas;
 
 onkeydown = (event) => {
    console.log(event.key);
