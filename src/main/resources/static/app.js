@@ -4,10 +4,12 @@ const ActionModes = Object.freeze({
    SHAPE: Symbol("shape")
 });
 
+const IsProduction = window.location.hostname !== "localhost";
+
 let currentActionMode = ActionModes.STROKE;
 
 const stompClient = new StompJs.Client({
-   brokerURL: 'ws://localhost:8080/draw-websocket'
+   brokerURL: IsProduction ? 'ws://4.158.114.105/draw-websocket' : 'ws://localhost:8080/draw-websocket'
 });
 
 stompClient.onConnect = (frame) => {

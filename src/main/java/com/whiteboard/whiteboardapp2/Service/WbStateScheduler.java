@@ -33,9 +33,7 @@ public class WbStateScheduler {
                 Duration.ZERO)
         );
 
-        if (lock.isEmpty()) {
-            return;
-        }
+        if (!lock.isPresent()) return;
 
         try {
             // TODO: Aggregate cached state and save to sql db
