@@ -1,4 +1,4 @@
-const ActionModes = Object.freeze({
+const ActionMode = Object.freeze({
    STROKE:   Symbol("stroke"),
    TEXT:  Symbol("text"),
    SHAPE: Symbol("shape")
@@ -6,13 +6,13 @@ const ActionModes = Object.freeze({
 
 const IsProduction = window.location.hostname !== "localhost";
 
-let currentActionMode = ActionModes.STROKE;
+let currentActionMode = ActionMode.STROKE;
 let stompConnected = false;
 let mouseDownId = -1;
 let typingActive = false;
 let canvasMouseX = 0;
 let canvasMouseY = 0;
-let canvasObject = $("#drawing-board");
+let canvasObject = $("#drawing-board")[0];
 let canvasContext = canvasObject.getContext('2d');
 
 const stompClient = new StompJs.Client({
@@ -20,7 +20,13 @@ const stompClient = new StompJs.Client({
 });
 
 let whileMouseDown = (event) => {
-   console.log(canvasMouseX, canvasMouseY);
+   if (currentActionMode === ActionMode.STROKE) {
+      // draw stroke
+      canvasContext.fillStyle = "black";
+      canvasContext.beginPath();
+      canvasContext.arc(canvasMouseX, canvasMouseY, 5, 0, 2 * Math.PI);
+      canvasContext.fill();
+   }
 }
 
 let onMouseUp = (event) => {
@@ -35,7 +41,7 @@ let onMouseUp = (event) => {
 let onMouseDown = (event) => {
    if (event.button !== 0) return;
 
-   if (mouseDownId === -1) setInterval(whileMouseDown, 100);
+   if (mouseDownId === -1) mouseDownId = setInterval(whileMouseDown, 50);
 }
 
 let onMouseMoveInCanvas = (event) => {
@@ -47,7 +53,7 @@ let onMouseMoveInCanvas = (event) => {
 
 stompClient.onConnect = (frame) => {
    stompConnected = true;
-   console.log("Connected");
+   console.log("websocket connected");
 
    stompClient.subscribe("/topic/board-state", (inbound) => {
       console.log(inbound.body);
@@ -64,23 +70,5 @@ document.body.onmousedown = onMouseDown;
 document.body.onmouseup = onMouseUp;
 document.body.onmouseout = onMouseUp;
 canvasObject.onmousemove = onMouseMoveInCanvas;
-
-onkeydown = (event) => {
-   console.log(event.key);
-
-   if (event.key === "f") {
-      console.log("Texting");
-
-      stompClient.publish({
-         destination: "/app/draw-text",
-         body: JSON.stringify({})
-      })
-   } else if (event.key === "r") {
-      stompClient.publish({
-         destination: "/app/get-board-state",
-         body: JSON.stringify({})
-      })
-   }
-}
 
 stompClient.activate();
