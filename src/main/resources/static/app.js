@@ -10,8 +10,8 @@ let currentActionMode = ActionMode.STROKE;
 let stompConnected = false;
 let mouseDownId = -1;
 let typingActive = false;
-let canvasMouseX = 0;
-let canvasMouseY = 0;
+let mouseX = 0;
+let mouseY = 0;
 let canvasObject = $("#drawing-board")[0];
 let canvasContext = canvasObject.getContext('2d');
 
@@ -19,13 +19,23 @@ const stompClient = new StompJs.Client({
    brokerURL: IsProduction ? 'ws://4.158.114.105/draw-websocket' : 'ws://localhost:8080/draw-websocket'
 });
 
+let strokes = {}
+
+let drawStroke = (mX, mY, strokeWidth, colour) => {
+   if (strokes[mX.toString() + ":" + mY.toString()]) return; // dont bother drawing if already stroke here
+
+   canvasContext.fillStyle = colour;
+   canvasContext.beginPath();
+   canvasContext.arc(mX, mY, strokeWidth, 0, 2 * Math.PI);
+   canvasContext.fill();
+
+   strokes[mX.toString() + ":" + mY.toString()] = true;
+}
+
 let whileMouseDown = (event) => {
    if (currentActionMode === ActionMode.STROKE) {
       // draw stroke
-      canvasContext.fillStyle = "black";
-      canvasContext.beginPath();
-      canvasContext.arc(canvasMouseX, canvasMouseY, 5, 0, 2 * Math.PI);
-      canvasContext.fill();
+      drawStroke(mouseX, mouseY, 5, "black");
    }
 }
 
@@ -42,13 +52,15 @@ let onMouseDown = (event) => {
    if (event.button !== 0) return;
 
    if (mouseDownId === -1) mouseDownId = setInterval(whileMouseDown, 50);
+
+   if (currentActionMode === ActionMode.STROKE) drawStroke(mouseX, mouseY, 5, "black");
 }
 
 let onMouseMoveInCanvas = (event) => {
    let cRect = canvasObject.getBoundingClientRect();
 
-   canvasMouseX = Math.round(event.clientX - cRect.left);
-   canvasMouseY = Math.round(event.clientY - cRect.top);
+   mouseX = Math.round(event.clientX - cRect.left);
+   mouseY = Math.round(event.clientY - cRect.top);
 }
 
 stompClient.onConnect = (frame) => {

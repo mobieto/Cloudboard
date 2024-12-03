@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface WhiteboardActionRepository extends JpaRepository<WhiteboardAction, Long> {
-    WhiteboardAction findByPixelCoords(String pixelCoords);
+    WhiteboardAction findByCoords(String coords);
 }

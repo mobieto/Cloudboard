@@ -27,10 +27,12 @@ public class WhiteboardStateScheduler {
     @Scheduled(cron = "0 0/5 * * * ?") // execute every 5 minutes
     public void aggregateAndSaveCache() {
         Optional<SimpleLock> lock = lockProvider.lock(
-                new LockConfiguration(Instant.now(),
-                "WbStateScheduler_aggregateAndSaveCache",
-                Duration.ofMinutes(4),
-                Duration.ZERO)
+                new LockConfiguration(
+                        Instant.now(),
+                        "WbStateScheduler_aggregateAndSaveCache",
+                        Duration.ofMinutes(4), // lock max duration
+                        Duration.ofMinutes(4) // local min duration
+                )
         );
 
         if (lock.isEmpty()) return; // lock is held by another instance

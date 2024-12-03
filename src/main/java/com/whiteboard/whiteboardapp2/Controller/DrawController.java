@@ -2,6 +2,8 @@ package com.whiteboard.whiteboardapp2.Controller;
 
 import com.whiteboard.whiteboardapp2.Model.WhiteboardAction;
 import com.whiteboard.whiteboardapp2.Repo.CacheRepository;
+import com.whiteboard.whiteboardapp2.Repo.WhiteboardActionRepository;
+import com.whiteboard.whiteboardapp2.WhiteboardApp2Application;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -18,6 +20,9 @@ import static com.whiteboard.whiteboardapp2.Constants.WB_STATE_PREFIX;
 public class DrawController {
     @Autowired
     private CacheRepository cacheRepository;
+
+    @Autowired
+    private WhiteboardActionRepository whiteboardActionRepository;
 
     @MessageMapping("/draw-stroke")
     @SendTo("/topic/board-state")
@@ -45,7 +50,6 @@ public class DrawController {
     @SendTo("/topic/board-state")
     public List<WhiteboardAction> getBoardState() {
         // TODO: Send state from SQL database along with cached state from Redis
-        Optional<String> value = cacheRepository.get(WB_ACTION_PREFIX + "test1");
 
         return List.of(new WhiteboardAction());
     }

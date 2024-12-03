@@ -10,7 +10,7 @@ public class WhiteboardAction {
     @GeneratedValue
     private Long id;
 
-    private String pixelCoords;
+    private String coords;
 
     private String action; // "action:stroke,width:1,colour:black" , "action:text,text:'Hello world!'" , "action:shape,shape:square,width:10,height:10"
 
@@ -18,16 +18,12 @@ public class WhiteboardAction {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public void setId(Long id) { this.id = id; }
 
-    public String getPixelCoords() {
-        return pixelCoords;
-    }
+    public String getCoords() { return coords; }
 
-    public void setPixelCoords(String pixelCoords) {
-        this.pixelCoords = pixelCoords;
+    public void setCoords(String coords) {
+        this.coords = coords;
     }
 
     public String getAction() {

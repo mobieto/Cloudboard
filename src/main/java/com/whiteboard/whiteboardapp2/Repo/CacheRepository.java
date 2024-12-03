@@ -1,5 +1,6 @@
 package com.whiteboard.whiteboardapp2.Repo;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface CacheRepository {
@@ -16,6 +17,8 @@ public interface CacheRepository {
     Long decrement(String key, boolean expire);
 
     Optional<String> get(String key);
+
+    List<String> getMulti(String key);
 
     void remove(String key);
 }

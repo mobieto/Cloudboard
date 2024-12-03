@@ -1,12 +1,13 @@
 package com.whiteboard.whiteboardapp2.Repo;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Repository
@@ -50,7 +51,7 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
 
             return result;
         } catch (RuntimeException runtimeException) {
-            throw new RuntimeException("Error saving to Redis cache");
+            throw new RuntimeException("Error incrementing to Redis cache");
         }
     }
 
@@ -64,7 +65,7 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
 
             return result;
         } catch (RuntimeException runtimeException) {
-            throw new RuntimeException("Error saving to Redis cache");
+            throw new RuntimeException("Error incrementing to Redis cache");
         }
     }
 
@@ -78,7 +79,7 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
 
             return result;
         } catch (RuntimeException runtimeException) {
-            throw new RuntimeException("Error saving to Redis cache");
+            throw new RuntimeException("Error decrementing to Redis cache");
         }
     }
 
@@ -92,7 +93,7 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
 
             return result;
         } catch (RuntimeException runtimeException) {
-            throw new RuntimeException("Error saving to Redis cache");
+            throw new RuntimeException("Error decrementing to Redis cache");
         }
     }
 
@@ -108,6 +109,28 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
             }
         } catch (RuntimeException runtimeException) {
             throw new RuntimeException("Error getting from Redis cache");
+        }
+    }
+
+    @Override
+    public List<String> getMulti(String key) {
+        try {
+            List<String> keys = new ArrayList<>();
+            ScanOptions scanOptions = ScanOptions.scanOptions().match(key).build();
+            Cursor<String> cursor = redisTemplate.scan(scanOptions);
+
+            while (cursor.hasNext()) {
+                keys.add(cursor.next());
+            }
+
+            cursor.close();
+
+            List<String> values = redisTemplate.opsForValue().multiGet(keys);
+            values.removeIf(Objects::isNull);
+
+            return values;
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error getting multiple keys from Redis cache");
         }
     }
 
