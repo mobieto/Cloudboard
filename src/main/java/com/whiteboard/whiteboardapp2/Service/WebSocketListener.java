@@ -9,6 +9,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.security.Principal;
+
 import static com.whiteboard.whiteboardapp2.Constants.WB_STATE_PREFIX;
 
 @Service

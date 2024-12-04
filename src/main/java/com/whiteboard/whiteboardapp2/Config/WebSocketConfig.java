@@ -1,5 +1,6 @@
 package com.whiteboard.whiteboardapp2.Config;
 
+import com.whiteboard.whiteboardapp2.Service.WebSocketHandshakeHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -17,6 +18,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/draw-websocket");
+        registry.addEndpoint("/draw-websocket")
+                .setHandshakeHandler(new WebSocketHandshakeHandler());
     }
 }

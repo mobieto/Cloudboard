@@ -1,17 +1,24 @@
 package com.whiteboard.whiteboardapp2.Controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whiteboard.whiteboardapp2.Model.WhiteboardAction;
 import com.whiteboard.whiteboardapp2.Repo.CacheRepository;
 import com.whiteboard.whiteboardapp2.Repo.WhiteboardActionRepository;
-import com.whiteboard.whiteboardapp2.WhiteboardApp2Application;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
+import java.security.Principal;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static com.whiteboard.whiteboardapp2.Constants.WB_ACTION_PREFIX;
 import static com.whiteboard.whiteboardapp2.Constants.WB_STATE_PREFIX;
@@ -24,12 +31,25 @@ public class DrawController {
     @Autowired
     private WhiteboardActionRepository whiteboardActionRepository;
 
-    @MessageMapping("/draw-stroke")
-    @SendTo("/topic/board-state")
-    public String drawStroke(@Payload WhiteboardAction action) {
-        //cacheRepository.put(WB_ACTION_PREFIX + "test1", "This is a stroke !");
+    @Autowired
+    private SimpMessagingTemplate simpMessagingTemplate;
 
-        return "Drew stroke!";
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @MessageMapping("/draw-stroke")
+    public void drawStroke(@Payload WhiteboardAction action, Principal principal) {
+        try {
+            String result = objectMapper.writeValueAsString(action);
+            //cacheRepository.put(action.getId().toString(), result, true);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("data", action);
+        payload.put("excludedSessionId", principal.getName());
+
+        simpMessagingTemplate.convertAndSend("/topic/new-stroke", payload);
     }
 
     @MessageMapping("/draw-shape")
@@ -47,16 +67,22 @@ public class DrawController {
     }
 
     @MessageMapping("/get-board-state")
-    @SendTo("/topic/board-state")
-    public List<WhiteboardAction> getBoardState() {
+    @SendToUser("/topic/board-state")
+    public List<WhiteboardAction> getBoardState(Principal principal) {
         // TODO: Send state from SQL database along with cached state from Redis
 
         return List.of(new WhiteboardAction());
     }
 
     @MessageMapping("/get-num-users")
-    @SendTo("/topic/connected-users")
+    @SendToUser("/topic/connected-users")
     public Long getNumUsers() {
         return Long.parseLong(cacheRepository.get(WB_STATE_PREFIX + "num-users").orElse("0"));
+    }
+
+    @MessageMapping("/get-session")
+    @SendToUser("/topic/session")
+    public String getSession(Principal principal) {
+        return principal.getName();
     }
 }

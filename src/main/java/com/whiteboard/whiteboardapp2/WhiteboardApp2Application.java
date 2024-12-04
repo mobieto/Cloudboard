@@ -5,9 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import static com.whiteboard.whiteboardapp2.Constants.WB_ACTION_PREFIX;
 
+@EnableScheduling
 @SpringBootApplication
 public class WhiteboardApp2Application implements CommandLineRunner {
     @Autowired
