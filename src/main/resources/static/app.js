@@ -44,7 +44,7 @@ let sendStrokeData = (mX, mY, strokeWidth, colour) => {
    }
 }
 
-let drawStroke = (mX, mY, strokeWidth, colour, doSave) => {
+let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
    if (!stompConnected) return;
    if (strokes[mX.toString() + ":" + mY.toString()]) return; // dont bother drawing if already stroke here
 
@@ -52,8 +52,18 @@ let drawStroke = (mX, mY, strokeWidth, colour, doSave) => {
    canvasContext.beginPath();
    canvasContext.arc(mX, mY, strokeWidth, 0, 2 * Math.PI);
    canvasContext.fill();
+   canvasContext.closePath();
 
    strokes[mX.toString() + ":" + mY.toString()] = true;
+
+   if (prevX && prevY && prevX !== -1 && prevY !== -1) {
+      canvasContext.beginPath();
+      canvasContext.lineWidth = strokeWidth * 2;
+      canvasContext.moveTo(mX, mY);
+      canvasContext.lineTo(prevX, prevY);
+      canvasContext.stroke();
+      canvasContext.closePath();
+   }
 
    if (!doSave) return;
 
@@ -92,7 +102,11 @@ let onMouseDown = (event) => {
 
    if (mouseDownId === -1) {
       mouseDownId = setInterval(whileMouseDown, 1);
-      if (currentActionMode === ActionMode.STROKE) drawStroke(mouseX, mouseY, 5, "black", true);
+      if (currentActionMode === ActionMode.STROKE) {
+         prevStrokeMY = -1;
+         prevStrokeMX = -1;
+         drawStroke(mouseX, mouseY, 5, "black", true);
+      }
    }
 }
 
@@ -111,7 +125,7 @@ stompClient.onConnect = (frame) => {
       //console.log(data);
    });
 
-   stompClient.subscribe("/user/topic/connected-users", (inbound) => {
+   stompClient.subscribe("/topic/connected-users", (inbound) => {
       $("#user-count").html("Connected users: " + inbound.body);
    });
 
@@ -126,13 +140,19 @@ stompClient.onConnect = (frame) => {
       const payload = JSON.parse(inbound.body);
 
       if (payload.excludedSessionId !== sessionId) {
-         drawStroke(payload.data.coordX, payload.data.coordY, 5, "black", false);
+         let actionData = payload.data.action.split(',');
+         let strokeWidth = actionData[1];
+         let colour = actionData[2];
+         let prevX = parseInt(actionData[3]);
+         let prevY = parseInt(actionData[4]);
+
+         drawStroke(payload.data.coordX, payload.data.coordY, strokeWidth, colour, false, prevX, prevY);
       }
    });
 
+   stompClient.publish({destination: "/app/get-session"});
    stompClient.publish({destination: "/app/get-num-users"});
    stompClient.publish({destination: "/app/get-board-state"});
-   stompClient.publish({destination: "/app/get-session"});
 }
 
 document.body.onmousedown = onMouseDown;

@@ -75,7 +75,7 @@ public class DrawController {
     }
 
     @MessageMapping("/get-num-users")
-    @SendToUser("/topic/connected-users")
+    @SendTo("/topic/connected-users")
     public Long getNumUsers() {
         return Long.parseLong(cacheRepository.get(WB_STATE_PREFIX + "num-users").orElse("0"));
     }
