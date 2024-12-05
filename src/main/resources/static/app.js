@@ -24,15 +24,15 @@ const stompClient = new StompJs.Client({
 let strokes = {};
 let strokeIdx = 0;
 let prevStrokeMX = -1, prevStrokeMY = -1;
-const SEND_STROKE_EVERY = 10;
+const SEND_STROKE_EVERY = 7;
 
 let sendStrokeData = (mX, mY, strokeWidth, colour) => {
    try {
       stompClient.publish({
          destination: "/app/draw-stroke",
          body: JSON.stringify({
-            coordX: mX,
-            coordY: mY,
+            x: mX,
+            y: mY,
             action: 'stroke,' + strokeWidth.toString() + ',' + colour + ',' + prevStrokeMX.toString() + ',' + prevStrokeMY.toString()
          })
       })
@@ -56,7 +56,7 @@ let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
 
    strokes[mX.toString() + ":" + mY.toString()] = true;
 
-   if (prevX && prevY && prevX !== -1 && prevY !== -1) {
+   if (prevX && prevY && prevX !== -1 && prevY !== -1) { // draw line to connect to previous point
       canvasContext.beginPath();
       canvasContext.lineWidth = strokeWidth * 2;
       canvasContext.moveTo(mX, mY);
@@ -67,11 +67,8 @@ let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
 
    if (!doSave) return;
 
-   if (strokeIdx === 0 || strokeIdx % SEND_STROKE_EVERY === 0) {
-      // send stroke data
-      console.log(strokeIdx);
+   if (strokeIdx === 0 || strokeIdx % SEND_STROKE_EVERY === 0) // send stroke data
       sendStrokeData(mX, mY, strokeWidth, colour);
-   }
 
    strokeIdx++;
 }
@@ -121,8 +118,19 @@ stompClient.onConnect = (frame) => {
    console.log("websocket connected");
 
    stompClient.subscribe("/user/topic/board-state", (inbound) => {
-      const data = JSON.parse(inbound.body);
-      //console.log(data);
+      const actions = JSON.parse(inbound.body);
+
+      for (let action of actions) {
+         action = JSON.parse(action);
+
+         let actionData = action.action.split(',');
+         let strokeWidth = actionData[1];
+         let colour = actionData[2];
+         let prevX = parseInt(actionData[3]);
+         let prevY = parseInt(actionData[4]);
+
+         drawStroke(action.x, action.y, strokeWidth, colour, false, prevX, prevY);
+      }
    });
 
    stompClient.subscribe("/topic/connected-users", (inbound) => {
@@ -146,7 +154,7 @@ stompClient.onConnect = (frame) => {
          let prevX = parseInt(actionData[3]);
          let prevY = parseInt(actionData[4]);
 
-         drawStroke(payload.data.coordX, payload.data.coordY, strokeWidth, colour, false, prevX, prevY);
+         drawStroke(payload.data.x, payload.data.y, strokeWidth, colour, false, prevX, prevY);
       }
    });
 

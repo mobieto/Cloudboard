@@ -6,11 +6,9 @@ import com.whiteboard.whiteboardapp2.Model.WhiteboardAction;
 import com.whiteboard.whiteboardapp2.Repo.CacheRepository;
 import com.whiteboard.whiteboardapp2.Repo.WhiteboardActionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
@@ -40,7 +38,7 @@ public class DrawController {
     public void drawStroke(@Payload WhiteboardAction action, Principal principal) {
         try {
             String result = objectMapper.writeValueAsString(action);
-            //cacheRepository.put(action.getId().toString(), result, true);
+            cacheRepository.put(WB_ACTION_PREFIX + action.getId(), result, true);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -54,24 +52,25 @@ public class DrawController {
 
     @MessageMapping("/draw-shape")
     @SendTo("/topic/board-state")
-    public String drawShape(@Payload WhiteboardAction action) {
-        return "Drew shape!";
+    public void drawShape(@Payload WhiteboardAction action) {
+
     }
 
     @MessageMapping("/draw-text")
     @SendTo("/topic/board-state")
-    public String drawText(@Payload WhiteboardAction action) {
+    public void drawText(@Payload WhiteboardAction action) {
         //cacheRepository.put(WB_ACTION_PREFIX + "test1", "This is a text !");
 
-        return "Drew text!";
+
     }
 
     @MessageMapping("/get-board-state")
     @SendToUser("/topic/board-state")
-    public List<WhiteboardAction> getBoardState(Principal principal) {
+    public List<String> getBoardState(Principal principal) {
         // TODO: Send state from SQL database along with cached state from Redis
+        List<String> data = cacheRepository.getMulti(WB_ACTION_PREFIX + "*");
 
-        return List.of(new WhiteboardAction());
+        return data;
     }
 
     @MessageMapping("/get-num-users")

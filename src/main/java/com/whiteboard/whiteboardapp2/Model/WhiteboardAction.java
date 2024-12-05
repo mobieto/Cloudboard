@@ -1,41 +1,41 @@
 package com.whiteboard.whiteboardapp2.Model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 @Entity
 public class WhiteboardAction {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Long id;
+    private String id;
 
-    private Long coordX;
-    private Long coordY;
+    private Long x;
+    private Long y;
 
     private String action; // "stroke,1,black,-1,-1" , "text,'Hello world!'" , "shape,square,10,10"
 
-    public Long getId() {
+    public WhiteboardAction() {
+        this.id = Long.toString(System.currentTimeMillis());
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) { this.id = id; }
+    public void setId(String id) { this.id = id; }
 
-    public Long getCoordX() {
-        return coordX;
+    public Long getX() {
+        return x;
     }
 
-    public void setCoordX(Long coordX) {
-        this.coordX = coordX;
+    public void setX(Long x) {
+        this.x = x;
     }
 
-    public Long getCoordY() {
-        return coordY;
+    public Long getY() {
+        return y;
     }
 
-    public void setCoordY(Long coordY) {
-        this.coordY = coordY;
+    public void setY(Long y) {
+        this.y = y;
     }
 
     public String getAction() {

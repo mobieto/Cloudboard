@@ -21,14 +21,14 @@ public class WebSocketListener extends TextWebSocketHandler {
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
 
-    @EventListener(SessionConnectEvent.class)
+    @EventListener(SessionConnectEvent.class) // client connected
     public void handleWebSocketConnection(SessionConnectEvent event) {
         Long result = cacheRepository.increment(WB_STATE_PREFIX + "num-users", false);
 
         simpMessagingTemplate.convertAndSend("/topic/connected-users", result);
     }
 
-    @EventListener(SessionDisconnectEvent.class)
+    @EventListener(SessionDisconnectEvent.class) // client disconnected
     public void handleWebSocketDisconnection(SessionDisconnectEvent event) {
         Long result = cacheRepository.decrement(WB_STATE_PREFIX + "num-users", false);
 
