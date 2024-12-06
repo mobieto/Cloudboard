@@ -52,16 +52,22 @@ public class DrawController {
 
     @MessageMapping("/draw-shape")
     @SendTo("/topic/board-state")
-    public void drawShape(@Payload WhiteboardAction action) {
+    public void drawShape(@Payload WhiteboardAction action, Principal principal) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("data", action);
+        payload.put("excludedSessionId", principal.getName());
 
+        simpMessagingTemplate.convertAndSend("/topic/new-shape", payload);
     }
 
     @MessageMapping("/draw-text")
     @SendTo("/topic/board-state")
-    public void drawText(@Payload WhiteboardAction action) {
-        //cacheRepository.put(WB_ACTION_PREFIX + "test1", "This is a text !");
+    public void drawText(@Payload WhiteboardAction action, Principal principal) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("data", action);
+        payload.put("excludedSessionId", principal.getName());
 
-
+        simpMessagingTemplate.convertAndSend("/topic/new-shape", payload);
     }
 
     @MessageMapping("/get-board-state")

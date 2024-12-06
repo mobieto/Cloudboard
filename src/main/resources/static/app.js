@@ -5,26 +5,24 @@ const ActionMode = Object.freeze({
 });
 
 const IsProduction = window.location.hostname !== "localhost";
+const SEND_STROKE_EVERY = 7;
 
 let sessionId = "";
-
 let currentActionMode = ActionMode.STROKE;
 let stompConnected = false;
-let mouseDownId = -1;
 let typingActive = false;
-let mouseX = 0;
-let mouseY = 0;
-let canvasObject = $("#drawing-board")[0];
-let canvasContext = canvasObject.getContext('2d');
+let mouseInCanvas = false;
+let mouseDownId = -1;
+let mouseX = 0, mouseY = 0;
+let strokeIdx = 0;
+let prevStrokeMX = -1, prevStrokeMY = -1;
+let strokes = {};
 
+const canvasObject = $("#drawing-board")[0];
+const canvasContext = canvasObject.getContext('2d');
 const stompClient = new StompJs.Client({
    brokerURL: IsProduction ? `ws://${window.location.hostname}/draw-websocket` : 'ws://localhost:8080/draw-websocket'
 });
-
-let strokes = {};
-let strokeIdx = 0;
-let prevStrokeMX = -1, prevStrokeMY = -1;
-const SEND_STROKE_EVERY = 7;
 
 let sendStrokeData = (mX, mY, strokeWidth, colour) => {
    try {
@@ -95,7 +93,7 @@ let onMouseUp = (event) => {
 }
 
 let onMouseDown = (event) => {
-   if (event.button !== 0) return;
+   if (event.button !== 0 || !mouseInCanvas) return;
 
    if (mouseDownId === -1) {
       mouseDownId = setInterval(whileMouseDown, 1);
@@ -163,9 +161,31 @@ stompClient.onConnect = (frame) => {
    stompClient.publish({destination: "/app/get-board-state"});
 }
 
+document.body.onmousemove = (event) => {
+   let cRect = canvasObject.getBoundingClientRect();
+
+   mouseInCanvas = (event.clientX >= cRect.left && event.clientX <= cRect.right &&
+       event.clientY >= cRect.top && event.clientY <= cRect.bottom);
+}
+
 document.body.onmousedown = onMouseDown;
 document.body.onmouseup = onMouseUp;
 document.body.onmouseout = onMouseUp;
 canvasObject.onmousemove = onMouseMoveInCanvas;
+
+$("#stroke-button").click(() => {
+   currentActionMode = ActionMode.STROKE;
+   $("#current-action").html("Brush");
+});
+
+$("#shape-button").click(() => {
+   currentActionMode = ActionMode.SHAPE;
+   $("#current-action").html("Shape");
+});
+
+$("#text-button").click(() => {
+   currentActionMode = ActionMode.TEXT;
+   $("#current-action").html("Text");
+});
 
 stompClient.activate();
