@@ -9,7 +9,7 @@ const Shapes = Object.freeze({
 })
 
 const IsProduction = window.location.hostname !== "localhost";
-const SEND_STROKE_EVERY = 7;
+const SEND_STROKE_EVERY = 5;
 
 let sessionId = "";
 let currentTypedText = "";
@@ -100,6 +100,17 @@ let sendTextData = (x, y, text) => {
    }
 }
 
+let thisPrevX = -1, thisPrevY = -1;
+
+let connectLine = (x1, y1, x2, y2, strokeWidth) => {
+   canvasContext.beginPath();
+   canvasContext.lineWidth = strokeWidth * 2;
+   canvasContext.moveTo(x1, y1);
+   canvasContext.lineTo(x2, y2);
+   canvasContext.stroke();
+   canvasContext.closePath();
+}
+
 let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
    if (!stompConnected) return;
    if (strokes[mX.toString() + ":" + mY.toString()]) return; // dont bother drawing if already stroke here
@@ -113,15 +124,17 @@ let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
    strokes[mX.toString() + ":" + mY.toString()] = true;
 
    if (prevX && prevY && prevX !== -1 && prevY !== -1) { // draw line to connect to previous point
-      canvasContext.beginPath();
-      canvasContext.lineWidth = strokeWidth * 2;
-      canvasContext.moveTo(mX, mY);
-      canvasContext.lineTo(prevX, prevY);
-      canvasContext.stroke();
-      canvasContext.closePath();
+      connectLine(mX, mY, prevX, prevY, strokeWidth);
    }
 
    if (!doSave) return;
+
+   if (thisPrevX !== -1 && thisPrevY !== -1) {
+      connectLine(mX, mY, thisPrevX, thisPrevY, strokeWidth);
+   }
+
+   thisPrevX = mX;
+   thisPrevY = mY;
 
    if (strokeIdx === 0 || strokeIdx % SEND_STROKE_EVERY === 0) // send stroke data
       sendStrokeData(mX, mY, strokeWidth, colour);
@@ -216,6 +229,8 @@ let onMouseUp = (event) => {
          strokeIdx = 0;
          drawStroke(mouseX, mouseY, 5, "black", true);
          strokeIdx = 0;
+         thisPrevX = -1;
+         thisPrevY = -1;
       } else if (currentActionMode === ActionMode.SHAPE && drawingShape) {
          const [originX, originY, width, height] = getRectProps();
 
