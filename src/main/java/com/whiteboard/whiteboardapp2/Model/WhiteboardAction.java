@@ -1,5 +1,6 @@
 package com.whiteboard.whiteboardapp2.Model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
@@ -8,6 +9,7 @@ public class WhiteboardAction {
     private String id;
 
     private Long x;
+
     private Long y;
 
     private String action; // "stroke,1,black,-1,-1" , "text,'Hello world!'" , "shape,square,10,10"

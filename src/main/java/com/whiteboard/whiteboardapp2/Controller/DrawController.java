@@ -17,6 +17,7 @@ import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static com.whiteboard.whiteboardapp2.Constants.WB_ACTION_PREFIX;
 import static com.whiteboard.whiteboardapp2.Constants.WB_STATE_PREFIX;
@@ -84,11 +85,30 @@ public class DrawController {
 
     @MessageMapping("/get-board-state")
     @SendToUser("/topic/board-state")
-    public List<String> getBoardState(Principal principal) {
+    public List<String> getBoardState() {
         // TODO: Send state from SQL database along with cached state from Redis
-        List<String> data = cacheRepository.getMulti(WB_ACTION_PREFIX + "*");
+        List<String> cachedData = cacheRepository.getMulti(WB_ACTION_PREFIX + "*");
+        List<WhiteboardAction> primaryData = whiteboardActionRepository.findAll();
+        List<String> jsonPrimaryData = primaryData.stream().map(object -> {
+            try {
+                return objectMapper.writeValueAsString(object);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }).toList();
 
-        return data;
+        return Stream.concat(jsonPrimaryData.stream(), cachedData.stream()).toList();
+    }
+
+    @MessageMapping("/clear-board")
+    @SendTo("/topic/clear-board")
+    public boolean clearBoard() {
+        simpMessagingTemplate.convertAndSend("/topic/clear-board", false);
+
+        cacheRepository.flushAll(WB_ACTION_PREFIX + "*");
+        whiteboardActionRepository.deleteAll();
+
+        return true;
     }
 
     @MessageMapping("/get-num-users")

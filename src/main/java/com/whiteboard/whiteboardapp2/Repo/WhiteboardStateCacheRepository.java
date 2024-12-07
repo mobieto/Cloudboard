@@ -115,6 +115,7 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
     @Override
     public List<String> getMulti(String key) {
         try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
             List<String> keys = new ArrayList<>();
             ScanOptions scanOptions = ScanOptions.scanOptions().match(key).build();
             Cursor<String> cursor = redisTemplate.scan(scanOptions);
@@ -125,12 +126,33 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
 
             cursor.close();
 
-            List<String> values = redisTemplate.opsForValue().multiGet(keys);
+            List<String> values = valueOperations.multiGet(keys);
             values.removeIf(Objects::isNull);
 
             return values;
         } catch (RuntimeException runtimeException) {
-            throw new RuntimeException("Error getting multiple keys from Redis cache");
+            throw new RuntimeException("Error getting multiple values from Redis cache");
+        }
+    }
+
+    @Override
+    public HashMap<String, String> getMultiWithKeys(String key) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            ScanOptions scanOptions = ScanOptions.scanOptions().match(key).build();
+            Cursor<String> cursor = redisTemplate.scan(scanOptions);
+            HashMap<String, String> out = new HashMap<>();
+
+            while (cursor.hasNext()) {
+                String _key = cursor.next();
+                out.put(_key, valueOperations.get(_key));
+            }
+
+            cursor.close();
+
+            return out;
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error getting multiple keys and values from Redis cache");
         }
     }
 
@@ -140,6 +162,23 @@ public class WhiteboardStateCacheRepository implements CacheRepository {
             ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
 
             valueOperations.getAndDelete(key);
+        } catch (RuntimeException runtimeException) {
+            throw new RuntimeException("Error removing from Redis cache");
+        }
+    }
+
+    @Override
+    public void flushAll(String key) {
+        try {
+            ValueOperations<String, String> valueOperations = this.redisTemplate.opsForValue();
+            ScanOptions scanOptions = ScanOptions.scanOptions().match(key).build();
+            Cursor<String> cursor = redisTemplate.scan(scanOptions);
+
+            while (cursor.hasNext()) {
+                valueOperations.getAndDelete(cursor.next());
+            }
+
+            cursor.close();
         } catch (RuntimeException runtimeException) {
             throw new RuntimeException("Error removing from Redis cache");
         }

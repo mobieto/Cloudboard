@@ -26,6 +26,8 @@ let strokeIdx = 0;
 let prevStrokeMX = -1, prevStrokeMY = -1;
 let strokes = {};
 
+let canvasReady = true;
+
 const canvasObject = $("#canvas-main")[0];
 const canvasTempObject = $("#canvas-temp")[0];
 const canvasContext = canvasObject.getContext('2d');
@@ -177,7 +179,7 @@ let drawTextPreview = (x, y, text) => {
    if (typingHintCounter > 200) typingHintCounter = 0;
 }
 
-let whileMouseDown = (event) => {
+let whileMouseDown = () => {
    if (currentActionMode === ActionMode.STROKE) {
       // draw stroke
       drawStroke(mouseX, mouseY, 5, "black", true);
@@ -187,8 +189,20 @@ let whileMouseDown = (event) => {
    }
 }
 
-let whileTyping = (event) => {
+let whileTyping = () => {
    drawTextPreview(startMX, startMY, currentTypedText);
+}
+
+let stopTyping = (x, y) => {
+   typingActive = false;
+   drawText(x, y, currentTypedText, true);
+   currentTypedText = "";
+   canvasTempContext.clearRect(0, 0, canvasTempObject.width, canvasTempObject.height);
+
+   if (typingId !== -1) {
+      clearInterval(typingId);
+      typingId = -1;
+   }
 }
 
 let onMouseUp = (event) => {
@@ -213,19 +227,8 @@ let onMouseUp = (event) => {
    }
 }
 
-let stopTyping = (x, y) => {
-   typingActive = false;
-   drawText(x, y, currentTypedText, true);
-   currentTypedText = "";
-   canvasTempContext.clearRect(0, 0, canvasTempObject.width, canvasTempObject.height);
-
-   if (typingId !== -1) {
-      clearInterval(typingId);
-      typingId = -1;
-   }
-}
-
 let onMouseDown = (event) => {
+   if (!canvasReady) return;
    if (event.button !== 0 || !mouseInCanvas) return;
 
    let oldMX = startMX;
@@ -257,6 +260,7 @@ let onMouseDown = (event) => {
 }
 
 let onKeyDown = (event) => {
+   if (!canvasReady) return;
    if (!typingActive) return;
 
    const key = event.key;
@@ -280,7 +284,7 @@ let onMouseMoveInCanvas = (event) => {
    mouseY = Math.round(event.clientY - cRect.top);
 }
 
-stompClient.onConnect = (frame) => {
+stompClient.onConnect = () => {
    console.log("websocket connected");
 
    stompClient.subscribe("/user/topic/board-state", (inbound) => {
@@ -350,6 +354,19 @@ stompClient.onConnect = (frame) => {
       }
    });
 
+   stompClient.subscribe("/topic/clear-board", (inbound) => {
+      const payload = JSON.parse(inbound.body);
+
+      if (payload === true) {
+         canvasContext.clearRect(0, 0, canvasObject.width, canvasObject.height)
+         canvasReady = true;
+         $("#clear-canvas-text").addClass("invisible");
+      } else {
+         canvasReady = false;
+         $("#clear-canvas-text").removeClass("invisible");
+      }
+   });
+
    stompClient.publish({destination: "/app/get-session"});
    stompClient.publish({destination: "/app/get-num-users"});
    stompClient.publish({destination: "/app/get-board-state"});
@@ -387,6 +404,12 @@ $("#text-button").click(() => {
 
    currentActionMode = ActionMode.TEXT;
    $("#current-action").html("Text");
+});
+
+$("#clear-button").click(() => {
+   if (!canvasReady) return;
+
+   stompClient.publish({destination: "/app/clear-board"});
 });
 
 stompClient.activate();

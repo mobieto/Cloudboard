@@ -41,8 +41,9 @@ body {
 
 .buttons {
     display: flex;
+    font-size: 14px;
     flex-direction: row;
-    gap: 20px;
+    gap: 5rem;
 }
 
 .square-preview {
@@ -53,4 +54,8 @@ body {
 
 .header2 {
     font-size: xx-large;
+}
+
+.invisible {
+    display: none;
 }

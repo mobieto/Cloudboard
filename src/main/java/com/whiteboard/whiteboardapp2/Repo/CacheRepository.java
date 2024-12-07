@@ -1,5 +1,6 @@
 package com.whiteboard.whiteboardapp2.Repo;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,5 +21,9 @@ public interface CacheRepository {
 
     List<String> getMulti(String key);
 
+    HashMap<String, String> getMultiWithKeys(String key);
+
     void remove(String key);
+
+    void flushAll(String key);
 }
