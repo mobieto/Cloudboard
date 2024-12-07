@@ -12,6 +12,7 @@ const IsProduction = window.location.hostname !== "localhost";
 const SEND_STROKE_EVERY = 7;
 
 let sessionId = "";
+let currentTypedText = "";
 let currentActionMode = ActionMode.STROKE;
 let stompConnected = false;
 let typingActive = false;
@@ -19,6 +20,7 @@ let mouseInCanvas = false;
 let drawingShape = false;
 let startMX = -1, startMY = -1;
 let mouseDownId = -1;
+let typingId = -1;
 let mouseX = 0, mouseY = 0;
 let strokeIdx = 0;
 let prevStrokeMX = -1, prevStrokeMY = -1;
@@ -82,7 +84,18 @@ let sendShapeData = (x, y, shape, width, height) => {
 }
 
 let sendTextData = (x, y, text) => {
-
+   try {
+      stompClient.publish({
+         destination: "/app/draw-text",
+         body: JSON.stringify({
+            x: x,
+            y: y,
+            action: 'text,' + text
+         })
+      })
+   } catch (exception) {
+      stompConnected = false;
+   }
 }
 
 let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
@@ -127,7 +140,16 @@ let drawShape = (x, y, shape, width, height, doSave) => {
 }
 
 let drawText = (x, y, text, doSave) => {
+   if (!text) return; // dont draw empty text
 
+   canvasContext.beginPath();
+   canvasContext.font = "20px Arial";
+   canvasContext.fillText(text, x, y);
+   canvasContext.closePath();
+
+   if (!doSave) return;
+
+   sendTextData(x, y, text);
 }
 
 let drawShapePreview = (x, y, shape, width, height) => {
@@ -142,6 +164,19 @@ let drawShapePreview = (x, y, shape, width, height) => {
    }
 }
 
+let typingHintCounter = 0;
+let drawTextPreview = (x, y, text) => {
+   canvasTempContext.clearRect(0, 0, canvasTempObject.width, canvasTempObject.height);
+
+   canvasTempContext.beginPath();
+   canvasTempContext.font = "20px Arial";
+   canvasTempContext.fillText(text + (typingHintCounter < 100 ? "" : "|"), x, y);
+   canvasTempContext.closePath();
+
+   typingHintCounter++
+   if (typingHintCounter > 200) typingHintCounter = 0;
+}
+
 let whileMouseDown = (event) => {
    if (currentActionMode === ActionMode.STROKE) {
       // draw stroke
@@ -150,6 +185,10 @@ let whileMouseDown = (event) => {
       const [originX, originY, width, height] = getRectProps();
       drawShapePreview(originX, originY, Shapes.SQUARE, width, height);
    }
+}
+
+let whileTyping = (event) => {
+   drawTextPreview(startMX, startMY, currentTypedText);
 }
 
 let onMouseUp = (event) => {
@@ -174,8 +213,23 @@ let onMouseUp = (event) => {
    }
 }
 
+let stopTyping = (x, y) => {
+   typingActive = false;
+   drawText(x, y, currentTypedText, true);
+   currentTypedText = "";
+   canvasTempContext.clearRect(0, 0, canvasTempObject.width, canvasTempObject.height);
+
+   if (typingId !== -1) {
+      clearInterval(typingId);
+      typingId = -1;
+   }
+}
+
 let onMouseDown = (event) => {
    if (event.button !== 0 || !mouseInCanvas) return;
+
+   let oldMX = startMX;
+   let oldMY = startMY;
 
    startMX = mouseX;
    startMY = mouseY;
@@ -189,7 +243,33 @@ let onMouseDown = (event) => {
          drawStroke(mouseX, mouseY, 5, "black", true);
       } else if (currentActionMode === ActionMode.SHAPE) {
          drawingShape = true;
+      } else if (currentActionMode === ActionMode.TEXT) {
+         if (typingActive) {
+            stopTyping(oldMX, oldMY);
+         } else {
+            typingActive = true;
+            currentTypedText = "";
+
+            if (typingId === -1) typingId = setInterval(whileTyping, 1);
+         }
       }
+   }
+}
+
+let onKeyDown = (event) => {
+   if (!typingActive) return;
+
+   const key = event.key;
+   const isAlphanumericOrSpecial = /^[a-zA-Z0-9!@#$£%^&*()_+¬\-=[\]{};':"\\|,.<>/?~` ]$/.test(key);
+
+   if (!isAlphanumericOrSpecial && key !== "Backspace" && key !== "Enter") return;
+
+   if (key === "Backspace") {
+      currentTypedText = currentTypedText.substring(0, currentTypedText.length - 1);
+   } else if (key === "Enter") {
+      if (typingActive) stopTyping(startMX, startMY);
+   } else {
+      currentTypedText += key;
    }
 }
 
@@ -213,20 +293,18 @@ stompClient.onConnect = (frame) => {
          let action = actionData[0];
 
          if (action === ActionMode.STROKE) {
-            let strokeWidth = actionData[1];
-            let colour = actionData[2];
-            let prevX = parseInt(actionData[3]);
-            let prevY = parseInt(actionData[4]);
+            let [, strokeWidth, colour, prevX, prevY] = actionData;
 
-            drawStroke(actionObj.x, actionObj.y, strokeWidth, colour, false, prevX, prevY);
+            drawStroke(actionObj.x, actionObj.y, strokeWidth, colour, false, parseInt(prevX), parseInt(prevY));
          } else if (action === ActionMode.SHAPE) {
-            let shape = Shapes[actionData[1]];
-            let width = parseInt(actionData[2]);
-            let height = parseInt(actionData[3]);
+            let [, shape, width, height] = actionData;
 
-            drawShape(shape, actionObj.x, actionObj.y, width, height, false);
+            drawShape(actionObj.x, actionObj.y, shape, width, height, false);
          } else if (action === ActionMode.TEXT) {
+            let [, ...text] = actionData;
+            text = text.join(',');
 
+            drawText(actionObj.x, actionObj.y, text, false);
          }
       }
    });
@@ -238,7 +316,6 @@ stompClient.onConnect = (frame) => {
    stompClient.subscribe("/user/topic/session", (inbound) => {
       sessionId = inbound.body;
       stompConnected = true;
-
       console.log(sessionId);
    });
 
@@ -246,13 +323,9 @@ stompClient.onConnect = (frame) => {
       const payload = JSON.parse(inbound.body);
 
       if (payload.excludedSessionId !== sessionId) {
-         let actionData = payload.data.action.split(',');
-         let strokeWidth = actionData[1];
-         let colour = actionData[2];
-         let prevX = parseInt(actionData[3]);
-         let prevY = parseInt(actionData[4]);
+         let [, strokeWidth, colour, prevX, prevY] = payload.data.action.split(',');
 
-         drawStroke(payload.data.x, payload.data.y, strokeWidth, colour, false, prevX, prevY);
+         drawStroke(payload.data.x, payload.data.y, strokeWidth, colour, false, parseInt(prevX), parseInt(prevY));
       }
    });
 
@@ -260,12 +333,20 @@ stompClient.onConnect = (frame) => {
       const payload = JSON.parse(inbound.body);
 
       if (payload.excludedSessionId !== sessionId) {
-         let actionData = payload.data.action.split(',');
-         let shape = actionData[1];
-         let width = parseInt(actionData[2]);
-         let height = parseInt(actionData[3]);
+         let [, shape, width, height] = payload.data.action.split(',');
 
-         drawShape(shape, payload.data.x, payload.data.y, width, height);
+         drawShape(payload.data.x, payload.data.y, shape, width, height, false);
+      }
+   });
+
+   stompClient.subscribe("/topic/new-text", (inbound) => {
+      const payload = JSON.parse(inbound.body);
+
+      if (payload.excludedSessionId !== sessionId) {
+         let [, ...text] = payload.data.action.split(',');
+         text = text.join(',');
+
+         drawText(payload.data.x, payload.data.y, text, false);
       }
    });
 
@@ -284,19 +365,26 @@ document.body.onmousemove = (event) => {
 document.body.onmousedown = onMouseDown;
 document.body.onmouseup = onMouseUp;
 document.body.onmouseout = onMouseUp;
+document.body.onkeydown = onKeyDown;
 canvasObject.onmousemove = onMouseMoveInCanvas;
 
 $("#stroke-button").click(() => {
+   if (typingActive || drawingShape) return;
+
    currentActionMode = ActionMode.STROKE;
    $("#current-action").html("Brush");
 });
 
 $("#shape-button").click(() => {
+   if (typingActive || drawingShape) return;
+
    currentActionMode = ActionMode.SHAPE;
    $("#current-action").html("Shape");
 });
 
 $("#text-button").click(() => {
+   if (typingActive || drawingShape) return;
+
    currentActionMode = ActionMode.TEXT;
    $("#current-action").html("Text");
 });

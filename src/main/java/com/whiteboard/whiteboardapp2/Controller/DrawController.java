@@ -68,11 +68,18 @@ public class DrawController {
 
     @MessageMapping("/draw-text")
     public void drawText(@Payload WhiteboardAction action, Principal principal) {
+        try {
+            String result = objectMapper.writeValueAsString(action);
+            cacheRepository.put(WB_ACTION_PREFIX + action.getId(), result, true);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
 
-        simpMessagingTemplate.convertAndSend("/topic/new-shape", payload);
+        simpMessagingTemplate.convertAndSend("/topic/new-text", payload);
     }
 
     @MessageMapping("/get-board-state")
