@@ -1,8 +1,12 @@
 const ActionMode = Object.freeze({
-   STROKE:   Symbol("stroke"),
-   TEXT:  Symbol("text"),
-   SHAPE: Symbol("shape")
+   STROKE: "stroke",
+   TEXT: "text",
+   SHAPE: "shape"
 });
+
+const Shapes = Object.freeze({
+   SQUARE: "square",
+})
 
 const IsProduction = window.location.hostname !== "localhost";
 const SEND_STROKE_EVERY = 7;
@@ -12,34 +16,73 @@ let currentActionMode = ActionMode.STROKE;
 let stompConnected = false;
 let typingActive = false;
 let mouseInCanvas = false;
+let drawingShape = false;
+let startMX = -1, startMY = -1;
 let mouseDownId = -1;
 let mouseX = 0, mouseY = 0;
 let strokeIdx = 0;
 let prevStrokeMX = -1, prevStrokeMY = -1;
 let strokes = {};
 
-const canvasObject = $("#drawing-board")[0];
+const canvasObject = $("#canvas-main")[0];
+const canvasTempObject = $("#canvas-temp")[0];
 const canvasContext = canvasObject.getContext('2d');
+const canvasTempContext = canvasTempObject.getContext('2d');
+
 const stompClient = new StompJs.Client({
    brokerURL: IsProduction ? `ws://${window.location.hostname}/draw-websocket` : 'ws://localhost:8080/draw-websocket'
 });
 
-let sendStrokeData = (mX, mY, strokeWidth, colour) => {
+let getRectProps = () => {
+   let nowMX = mouseX;
+   let nowMY = mouseY;
+   let width = Math.abs(nowMX - startMX);
+   let height = Math.abs(nowMY - startMY);
+
+   let originX = startMX;
+   let originY = startMY;
+
+   if (nowMX < startMX) originX = startMX - width;
+   if (nowMY < startMY) originY = startMY - height;
+
+   return [originX, originY, width, height];
+}
+
+let sendStrokeData = (x, y, strokeWidth, colour) => {
    try {
       stompClient.publish({
          destination: "/app/draw-stroke",
          body: JSON.stringify({
-            x: mX,
-            y: mY,
+            x: x,
+            y: y,
             action: 'stroke,' + strokeWidth.toString() + ',' + colour + ',' + prevStrokeMX.toString() + ',' + prevStrokeMY.toString()
          })
       })
 
-      prevStrokeMX = mX;
-      prevStrokeMY = mY;
+      prevStrokeMX = x;
+      prevStrokeMY = y;
    } catch (exception) {
       stompConnected = false;
    }
+}
+
+let sendShapeData = (x, y, shape, width, height) => {
+   try {
+      stompClient.publish({
+         destination: "/app/draw-shape",
+         body: JSON.stringify({
+            x: x,
+            y: y,
+            action: 'shape,' + shape + ',' + width.toString() + ',' + height.toString()
+         })
+      })
+   } catch (exception) {
+      stompConnected = false;
+   }
+}
+
+let sendTextData = (x, y, text) => {
+
 }
 
 let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
@@ -71,10 +114,41 @@ let drawStroke = (mX, mY, strokeWidth, colour, doSave, prevX, prevY) => {
    strokeIdx++;
 }
 
+let drawShape = (x, y, shape, width, height, doSave) => {
+   canvasContext.beginPath();
+   canvasContext.lineWidth = 5;
+   canvasContext.rect(x, y, width, height);
+   canvasContext.stroke();
+   canvasContext.closePath();
+
+   if (!doSave) return;
+
+   sendShapeData(x, y, shape, width, height);
+}
+
+let drawText = (x, y, text, doSave) => {
+
+}
+
+let drawShapePreview = (x, y, shape, width, height) => {
+   if (shape === Shapes.SQUARE) {
+      canvasTempContext.clearRect(0, 0, canvasTempObject.width, canvasTempObject.height);
+
+      canvasTempContext.beginPath();
+      canvasTempContext.lineWidth = 5;
+      canvasTempContext.rect(x, y, width, height);
+      canvasTempContext.stroke();
+      canvasTempContext.closePath();
+   }
+}
+
 let whileMouseDown = (event) => {
    if (currentActionMode === ActionMode.STROKE) {
       // draw stroke
       drawStroke(mouseX, mouseY, 5, "black", true);
+   } else if (currentActionMode === ActionMode.SHAPE) {
+      const [originX, originY, width, height] = getRectProps();
+      drawShapePreview(originX, originY, Shapes.SQUARE, width, height);
    }
 }
 
@@ -84,10 +158,18 @@ let onMouseUp = (event) => {
    if (mouseDownId !== -1) {
       clearInterval(mouseDownId);
       mouseDownId = -1;
+
       if (currentActionMode === ActionMode.STROKE) {
          strokeIdx = 0;
          drawStroke(mouseX, mouseY, 5, "black", true);
          strokeIdx = 0;
+      } else if (currentActionMode === ActionMode.SHAPE && drawingShape) {
+         const [originX, originY, width, height] = getRectProps();
+
+         drawShape(originX, originY, Shapes.SQUARE, width, height, true);
+
+         drawingShape = false;
+         canvasTempContext.clearRect(0, 0, canvasTempObject.width, canvasTempObject.height);
       }
    }
 }
@@ -95,12 +177,18 @@ let onMouseUp = (event) => {
 let onMouseDown = (event) => {
    if (event.button !== 0 || !mouseInCanvas) return;
 
+   startMX = mouseX;
+   startMY = mouseY;
+
    if (mouseDownId === -1) {
       mouseDownId = setInterval(whileMouseDown, 1);
+
       if (currentActionMode === ActionMode.STROKE) {
          prevStrokeMY = -1;
          prevStrokeMX = -1;
          drawStroke(mouseX, mouseY, 5, "black", true);
+      } else if (currentActionMode === ActionMode.SHAPE) {
+         drawingShape = true;
       }
    }
 }
@@ -118,16 +206,28 @@ stompClient.onConnect = (frame) => {
    stompClient.subscribe("/user/topic/board-state", (inbound) => {
       const actions = JSON.parse(inbound.body);
 
-      for (let action of actions) {
-         action = JSON.parse(action);
+      for (let actionObj of actions) {
+         actionObj = JSON.parse(actionObj);
 
-         let actionData = action.action.split(',');
-         let strokeWidth = actionData[1];
-         let colour = actionData[2];
-         let prevX = parseInt(actionData[3]);
-         let prevY = parseInt(actionData[4]);
+         let actionData = actionObj.action.split(',');
+         let action = actionData[0];
 
-         drawStroke(action.x, action.y, strokeWidth, colour, false, prevX, prevY);
+         if (action === ActionMode.STROKE) {
+            let strokeWidth = actionData[1];
+            let colour = actionData[2];
+            let prevX = parseInt(actionData[3]);
+            let prevY = parseInt(actionData[4]);
+
+            drawStroke(actionObj.x, actionObj.y, strokeWidth, colour, false, prevX, prevY);
+         } else if (action === ActionMode.SHAPE) {
+            let shape = Shapes[actionData[1]];
+            let width = parseInt(actionData[2]);
+            let height = parseInt(actionData[3]);
+
+            drawShape(shape, actionObj.x, actionObj.y, width, height, false);
+         } else if (action === ActionMode.TEXT) {
+
+         }
       }
    });
 
@@ -153,6 +253,19 @@ stompClient.onConnect = (frame) => {
          let prevY = parseInt(actionData[4]);
 
          drawStroke(payload.data.x, payload.data.y, strokeWidth, colour, false, prevX, prevY);
+      }
+   });
+
+   stompClient.subscribe("/topic/new-shape", (inbound) => {
+      const payload = JSON.parse(inbound.body);
+
+      if (payload.excludedSessionId !== sessionId) {
+         let actionData = payload.data.action.split(',');
+         let shape = actionData[1];
+         let width = parseInt(actionData[2]);
+         let height = parseInt(actionData[3]);
+
+         drawShape(shape, payload.data.x, payload.data.y, width, height);
       }
    });
 

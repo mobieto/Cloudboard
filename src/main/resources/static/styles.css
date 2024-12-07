@@ -3,8 +3,23 @@ body {
     justify-content: center;
 }
 
-.drawing-board {
+.canvas-container {
+    position: relative;
+}
+
+.canvas-main {
     border: 2px solid black;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+}
+
+.canvas-temp {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
 }
 
 .title-container {
@@ -28,4 +43,10 @@ body {
     display: flex;
     flex-direction: row;
     gap: 20px;
+}
+
+.square-preview {
+    position: absolute;
+    background-color: black;
+    color: black;
 }
