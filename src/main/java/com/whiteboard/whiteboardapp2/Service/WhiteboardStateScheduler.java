@@ -74,9 +74,9 @@ public class WhiteboardStateScheduler {
 
     @EventListener({ ContextClosedEvent.class })
     public void onInstanceShutdown() {
-        cacheRepository.decrement(WB_STATE_PREFIX + "instances", false);
+        Long result = cacheRepository.decrement(WB_STATE_PREFIX + "instances", false);
 
-        if (Long.parseLong(cacheRepository.get(WB_STATE_PREFIX + "instances").orElse("0")) < 1) {
+        if (result < 1) {
             try {
                 save();
             } catch (JsonProcessingException e) {
