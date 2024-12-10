@@ -2,7 +2,6 @@ package com.whiteboard.whiteboardapp2.Config;
 
 import com.whiteboard.whiteboardapp2.Service.RedisSubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -16,11 +15,10 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
-    @Value("${redis.pubsub.topic:channel-events}")
-    private String topic;
+    private final String topic = "channel-events";
 
     @Autowired
-    private RedisConnectionFactory redisConnectionFactory;
+    private RedisSubscriber redisSubscriber;
 
     @Bean
     public RedisTemplate<?, ?> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
@@ -41,16 +39,12 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+
         return template;
     }
 
     @Bean
-    public ChannelTopic channelTopic() {
-        return new ChannelTopic(topic);
-    }
-
-    @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(ChannelTopic channelTopic) {
+    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
         redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
         redisMessageListenerContainer.addMessageListener(messageListenerAdapter(), channelTopic());
@@ -59,7 +53,12 @@ public class RedisConfig {
     }
 
     @Bean
+    public ChannelTopic channelTopic() {
+        return new ChannelTopic(topic);
+    }
+
+    @Bean
     public MessageListenerAdapter messageListenerAdapter() {
-        return new MessageListenerAdapter(new RedisSubscriber());
+        return new MessageListenerAdapter(redisSubscriber);
     }
 }

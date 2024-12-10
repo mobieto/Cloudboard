@@ -333,9 +333,9 @@ stompClient.onConnect = () => {
    });
 
    stompClient.subscribe("/user/topic/session", (inbound) => {
-      sessionId = inbound.body;
-      stompConnected = true;
-      console.log(sessionId);
+       let [ sessionId , hostId ] = JSON.parse(inbound.body);
+       stompConnected = true;
+       console.log("Session ID: " + sessionId + " | Host ID: " + hostId);
    });
 
    stompClient.subscribe("/topic/new-stroke", (inbound) => {

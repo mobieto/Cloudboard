@@ -6,7 +6,6 @@ import com.whiteboard.whiteboardapp2.Model.WhiteboardAction;
 import com.whiteboard.whiteboardapp2.Repo.CacheRepository;
 import com.whiteboard.whiteboardapp2.Repo.WhiteboardActionRepository;
 import com.whiteboard.whiteboardapp2.Service.RedisPublisher;
-import com.whiteboard.whiteboardapp2.Service.RedisSubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -21,8 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static com.whiteboard.whiteboardapp2.Constants.WB_ACTION_PREFIX;
-import static com.whiteboard.whiteboardapp2.Constants.WB_STATE_PREFIX;
+import static com.whiteboard.whiteboardapp2.Constants.*;
 
 @Controller
 public class DrawController {
@@ -53,8 +51,11 @@ public class DrawController {
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
 
-        redisPublisher.publish(action);
+        Map<String, Object> publishPayload = new HashMap<>();
+        publishPayload.put("host", HOST_NAME);
+        publishPayload.put("data", action);
 
+        redisPublisher.publish(publishPayload);
         simpMessagingTemplate.convertAndSend("/topic/new-stroke", payload);
     }
 
@@ -71,8 +72,11 @@ public class DrawController {
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
 
-        redisPublisher.publish(action);
+        Map<String, Object> publishPayload = new HashMap<>();
+        publishPayload.put("host", HOST_NAME);
+        publishPayload.put("data", action);
 
+        redisPublisher.publish(publishPayload);
         simpMessagingTemplate.convertAndSend("/topic/new-shape", payload);
     }
 
@@ -89,8 +93,11 @@ public class DrawController {
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
 
-        redisPublisher.publish(action);
+        Map<String, Object> publishPayload = new HashMap<>();
+        publishPayload.put("host", HOST_NAME);
+        publishPayload.put("data", action);
 
+        redisPublisher.publish(publishPayload);
         simpMessagingTemplate.convertAndSend("/topic/new-text", payload);
     }
 
@@ -111,8 +118,6 @@ public class DrawController {
         return Stream.concat(jsonPrimaryData.stream(), cachedData.stream()).toList();
     }
 
-
-
     @MessageMapping("/clear-board")
     @SendTo("/topic/clear-board")
     public boolean clearBoard() {
@@ -132,7 +137,7 @@ public class DrawController {
 
     @MessageMapping("/get-session")
     @SendToUser("/topic/session")
-    public String getSession(Principal principal) {
-        return principal.getName();
+    public List<String> getSession(Principal principal) {
+        return List.of(principal.getName(), HOST_NAME);
     }
 }
