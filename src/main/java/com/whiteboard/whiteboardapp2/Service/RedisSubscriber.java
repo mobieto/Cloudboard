@@ -29,12 +29,16 @@ public class RedisSubscriber implements MessageListener {
 
             if (payload.get("host").equals(HOST_NAME)) return; // prevent same instance from sending actions again
 
+            if (objectMapper.convertValue(payload.get("clear"), Boolean.class) != null) {
+                simpMessagingTemplate.convertAndSend("/topic/clear-board", true);
+                return;
+            };
+
             WhiteboardAction whiteboardAction = objectMapper.convertValue(payload.get("data"), WhiteboardAction.class);
             String action = whiteboardAction.getAction().split(",")[0];
 
             Map<String, Object> outPayload = new HashMap<>();
             outPayload.put("data", whiteboardAction);
-            outPayload.put("excludedSessionId", "");
 
             simpMessagingTemplate.convertAndSend("/topic/new-" + action, outPayload);
         } catch (IOException e) {

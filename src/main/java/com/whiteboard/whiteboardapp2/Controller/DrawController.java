@@ -120,13 +120,17 @@ public class DrawController {
 
     @MessageMapping("/clear-board")
     @SendTo("/topic/clear-board")
-    public boolean clearBoard() {
-        simpMessagingTemplate.convertAndSend("/topic/clear-board", false);
+    public void clearBoard() {
+        simpMessagingTemplate.convertAndSend("/topic/clear-board", true);
+
+        Map<String, Object> publishPayload = new HashMap<>();
+        publishPayload.put("host", HOST_NAME);
+        publishPayload.put("clear", true);
+
+        redisPublisher.publish(publishPayload);
 
         cacheRepository.flushAll(WB_ACTION_PREFIX + "*");
         whiteboardActionRepository.deleteAll();
-
-        return true;
     }
 
     @MessageMapping("/get-num-users")
