@@ -374,11 +374,10 @@ stompClient.onConnect = () => {
 
       if (payload === true) {
          canvasContext.clearRect(0, 0, canvasObject.width, canvasObject.height)
-         canvasReady = true;
-         $("#clear-canvas-text").addClass("invisible");
-      } else {
-         canvasReady = false;
          $("#clear-canvas-text").removeClass("invisible");
+         setTimeout(() => {
+            $("#clear-canvas-text").addClass("invisible");
+         }, 3000)
       }
    });
 
