@@ -1,10 +1,14 @@
 package com.whiteboard.whiteboardapp2.Model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
+import java.io.Serializable;
+
 @Entity
-public class WhiteboardAction {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class WhiteboardAction implements Serializable {
     @Id
     private String id;
 

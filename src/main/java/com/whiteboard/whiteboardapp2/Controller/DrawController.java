@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whiteboard.whiteboardapp2.Model.WhiteboardAction;
 import com.whiteboard.whiteboardapp2.Repo.CacheRepository;
 import com.whiteboard.whiteboardapp2.Repo.WhiteboardActionRepository;
+import com.whiteboard.whiteboardapp2.Service.RedisPublisher;
+import com.whiteboard.whiteboardapp2.Service.RedisSubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -33,6 +35,9 @@ public class DrawController {
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
 
+    @Autowired
+    private RedisPublisher redisPublisher;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MessageMapping("/draw-stroke")
@@ -47,6 +52,8 @@ public class DrawController {
         Map<String, Object> payload = new HashMap<>();
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
+
+        redisPublisher.publish(action);
 
         simpMessagingTemplate.convertAndSend("/topic/new-stroke", payload);
     }
@@ -64,6 +71,8 @@ public class DrawController {
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
 
+        redisPublisher.publish(action);
+
         simpMessagingTemplate.convertAndSend("/topic/new-shape", payload);
     }
 
@@ -79,6 +88,8 @@ public class DrawController {
         Map<String, Object> payload = new HashMap<>();
         payload.put("data", action);
         payload.put("excludedSessionId", principal.getName());
+
+        redisPublisher.publish(action);
 
         simpMessagingTemplate.convertAndSend("/topic/new-text", payload);
     }
@@ -99,6 +110,8 @@ public class DrawController {
 
         return Stream.concat(jsonPrimaryData.stream(), cachedData.stream()).toList();
     }
+
+
 
     @MessageMapping("/clear-board")
     @SendTo("/topic/clear-board")
