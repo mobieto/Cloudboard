@@ -36,8 +36,6 @@ public class RedisSubscriber implements MessageListener {
             outPayload.put("data", whiteboardAction);
             outPayload.put("excludedSessionId", "");
 
-            System.out.println(action);
-
             simpMessagingTemplate.convertAndSend("/topic/new-" + action, outPayload);
         } catch (IOException e) {
             throw new RuntimeException(e);
