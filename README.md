@@ -1,11 +1,11 @@
 # Online whiteboard app built with Spring
   
 ### To deploy locally:  
-#### Building & packaging the app  
+#### Build & package the app 
 *mvn clean package -DskipTests*  
   
-#### Building Docker image  
+#### Build Docker image 
 *docker build -t cloudboard:latest .*  
   
-#### Running it  
+#### Run it 
 *docker run -p 8080:8080 cloudboard:latest*  
