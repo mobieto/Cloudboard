@@ -1,7 +1,7 @@
 # Online whiteboard app built with Spring
   
 ### To deploy locally:  
-#### Build & package the app 
+#### Build the app 
 *mvn clean package -DskipTests*  
   
 #### Build Docker image 
