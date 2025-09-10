@@ -1,4 +1,4 @@
-# Online scalable whiteboard app
+# Online scalable whiteboard app built with Spring Boot
   
 ### To deploy locally:  
 #### Build the app 
